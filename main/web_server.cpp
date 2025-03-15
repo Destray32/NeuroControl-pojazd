@@ -1,5 +1,6 @@
 #include "web_server.h"
 #include "motor_control.h"
+#include "api_handler.h"
 #include <WebServer.h>
 
 // Deklaracja referencji do obiektu WebServer
@@ -18,6 +19,11 @@ void setupWebServer(WebServer &server)
     server.on("/left", handleLeft);
     server.on("/right", handleRight);
     server.on("/stop", handleStop);
+    
+    // Konfiguracja endpointów API
+    setupAPIEndpoints(server);
+    
+    server.onNotFound(handleNotFound); // Obsługa nieznalezionych endpointów
 
     // Uruchomienie serwera
     server.begin();
@@ -96,5 +102,14 @@ void handleStop()
     if (server_ptr)
     {
         server_ptr->send(200, "text/plain", "Zatrzymano");
+    }
+}
+
+// Handler dla nieznalezionych endpointów
+void handleNotFound()
+{
+    if (server_ptr)
+    {
+        server_ptr->send(404, "text/plain", "Nie znaleziono");
     }
 }

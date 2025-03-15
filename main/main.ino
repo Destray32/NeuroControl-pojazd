@@ -1,8 +1,10 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include <ArduinoJson.h>
 #include "config.h"
 #include "motor_control.h"
 #include "web_server.h"
+#include "api_handler.h"
 
 // Utworzenie serwera web na porcie 80
 WebServer server(80);
