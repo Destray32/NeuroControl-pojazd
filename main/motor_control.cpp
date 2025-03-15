@@ -31,8 +31,8 @@ void moveForward()
 
     // Prawy silnik do przodu
     digitalWrite(RIGHT_MOTOR_ENB, HIGH);
-    analogWrite(RIGHT_MOTOR_IN3, MOTOR_SPEED);
-    analogWrite(RIGHT_MOTOR_IN4, 0);
+    analogWrite(RIGHT_MOTOR_IN3, 0);
+    analogWrite(RIGHT_MOTOR_IN4, MOTOR_SPEED);
 }
 
 // Funkcja do jazdy pojazdem do tyłu
@@ -80,7 +80,7 @@ void turnRight()
     // Prawy silnik stop lub do tyłu
     digitalWrite(RIGHT_MOTOR_ENB, HIGH);
     analogWrite(RIGHT_MOTOR_IN3, 0);
-    analogWrite(RIGHT_MOTOR_IN4, TURN_SPEED);
+    analogWrite(RIGHT_MOTOR_IN4, 0);
 }
 
 // Funkcja do zatrzymania wszystkich silników
