@@ -11,6 +11,7 @@ void handleAPIRoot();
 void handleAPIInfo();
 void handleAPIMotorControl();
 void handleAPIStatus();
+void handleAPIDocs();
 
 // funkcje pomocnicze
 String createJSONResponse(bool success, const String& message, JsonObject& data);
