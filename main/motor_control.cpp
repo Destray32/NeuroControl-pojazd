@@ -15,8 +15,6 @@ void setupMotors()
     pinMode(RIGHT_MOTOR_IN3, OUTPUT);
     pinMode(RIGHT_MOTOR_IN4, OUTPUT);
 
-    // Początkowo zatrzymaj oba silniki
-    stopMotors();
 }
 
 // Funkcja do jazdy pojazdem do przodu
@@ -25,12 +23,12 @@ void moveForward()
     Serial.println("Jazda do przodu");
 
     // Lewy silnik do przodu
-    digitalWrite(LEFT_MOTOR_ENA, HIGH);
+    // digitalWrite(LEFT_MOTOR_ENA, HIGH);
     analogWrite(LEFT_MOTOR_IN1, MOTOR_SPEED);
     analogWrite(LEFT_MOTOR_IN2, 0);
 
     // Prawy silnik do przodu
-    digitalWrite(RIGHT_MOTOR_ENB, HIGH);
+    // digitalWrite(RIGHT_MOTOR_ENB, HIGH);
     analogWrite(RIGHT_MOTOR_IN3, 0);
     analogWrite(RIGHT_MOTOR_IN4, MOTOR_SPEED);
 }
@@ -40,15 +38,11 @@ void moveBackward()
 {
     Serial.println("Jazda do tyłu");
 
-    // Lewy silnik do tyłu
-    digitalWrite(LEFT_MOTOR_ENA, HIGH);
-    analogWrite(LEFT_MOTOR_IN1, 0);
-    analogWrite(LEFT_MOTOR_IN2, MOTOR_SPEED);
+    analogWrite(RIGHT_MOTOR_IN3, 100);
+    analogWrite(RIGHT_MOTOR_IN4, 0);
 
-    // Prawy silnik do tyłu
-    digitalWrite(RIGHT_MOTOR_ENB, HIGH);
-    analogWrite(RIGHT_MOTOR_IN3, 0);
-    analogWrite(RIGHT_MOTOR_IN4, MOTOR_SPEED);
+    analogWrite(LEFT_MOTOR_IN1, 0);
+    analogWrite(LEFT_MOTOR_IN2, 100);
 }
 
 // Funkcja do skręcania pojazdem w lewo
@@ -57,13 +51,13 @@ void turnLeft()
     Serial.println("Skręt w lewo");
 
     // Lewy silnik stop lub do tyłu
-    digitalWrite(LEFT_MOTOR_ENA, HIGH);
+    // digitalWrite(LEFT_MOTOR_ENA, HIGH);
     analogWrite(LEFT_MOTOR_IN1, 0);
     analogWrite(LEFT_MOTOR_IN2, TURN_SPEED);
 
     // Prawy silnik do przodu
-    digitalWrite(RIGHT_MOTOR_ENB, HIGH);
-    analogWrite(RIGHT_MOTOR_IN3, TURN_SPEED);
+    // digitalWrite(RIGHT_MOTOR_ENB, HIGH);
+    analogWrite(RIGHT_MOTOR_IN3, 0);
     analogWrite(RIGHT_MOTOR_IN4, 0);
 }
 
@@ -73,12 +67,12 @@ void turnRight()
     Serial.println("Skręt w prawo");
 
     // Lewy silnik do przodu
-    digitalWrite(LEFT_MOTOR_ENA, HIGH);
+    // digitalWrite(LEFT_MOTOR_ENA, HIGH);
     analogWrite(LEFT_MOTOR_IN1, TURN_SPEED);
     analogWrite(LEFT_MOTOR_IN2, 0);
 
     // Prawy silnik stop lub do tyłu
-    digitalWrite(RIGHT_MOTOR_ENB, HIGH);
+    // digitalWrite(RIGHT_MOTOR_ENB, HIGH);
     analogWrite(RIGHT_MOTOR_IN3, 0);
     analogWrite(RIGHT_MOTOR_IN4, 0);
 }
@@ -89,12 +83,12 @@ void stopMotors()
     Serial.println("Zatrzymanie silników");
 
     // Zatrzymanie lewego silnika
-    digitalWrite(LEFT_MOTOR_ENA, LOW);
+    // digitalWrite(LEFT_MOTOR_ENA, LOW);
     analogWrite(LEFT_MOTOR_IN1, 0);
     analogWrite(LEFT_MOTOR_IN2, 0);
 
     // Zatrzymanie prawego silnika
-    digitalWrite(RIGHT_MOTOR_ENB, LOW);
+    // digitalWrite(RIGHT_MOTOR_ENB, LOW);
     analogWrite(RIGHT_MOTOR_IN3, 0);
     analogWrite(RIGHT_MOTOR_IN4, 0);
 }

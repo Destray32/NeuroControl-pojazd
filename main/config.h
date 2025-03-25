@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 // Definicje pinów dla silników
-#define LEFT_MOTOR_ENA 3    // Pin włączający dla lewego silnika
+#define LEFT_MOTOR_ENA 2    // Pin włączający dla lewego silnika
 #define LEFT_MOTOR_IN1 32   // Pin wejściowy 1 dla lewego silnika
 #define LEFT_MOTOR_IN2 33   // Pin wejściowy 2 dla lewego silnika
 
