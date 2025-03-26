@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ArduinoJson.h>
+#include <WebSocketsServer.h>
 #include "config.h"
 #include "motor_control.h"
 #include "web_server.h"
@@ -8,6 +9,7 @@
 
 // Utworzenie serwera web na porcie 80
 WebServer server(80);
+WebSocketsServer webSocket = WebSocketsServer(82);
 
 void setup() {
   Serial.begin(9600);
@@ -32,10 +34,16 @@ void setup() {
   
   // Inicjalizacja serwera webowego
   setupWebServer(server);
+
+  // inicjalizowanie serwerów WebSocket
+  setupWebSocketServer(webSocket);
+  webSocket.begin();
+  Serial.println("Serwer WebSocket uruchomiony na porcie 82");
 }
 
 void loop() {
   // Obsługa żądań klientów
   server.handleClient();
+  webSocket.loop();
   delay(2);  // Małe opóźnienie dla stabilności
 }

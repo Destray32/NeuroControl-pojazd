@@ -4,9 +4,119 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 
+enum ControlMode 
+{
+    WEB_CONTROL,
+    ML_CONTROL
+};
+
+ControlMode currentMode = WEB_CONTROL; // domyślnie kontrola to manualna przez serwer web
+WebSocketsServer* wsServer = nullptr;
 WebServer* api_server_ptr = nullptr;
 
-void setupAPIEndpoints(WebServer& server) {
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
+{
+    switch (type)
+    {
+        case WStype_DISCONNECTED:
+            Serial.printf("WebSocket %u rozlaczony\n", num);
+            break;
+        case WStype_CONNECTED:
+        {
+            IPAddress ip = wsServer->remoteIP(num);
+            Serial.printf("WebSocket %u polaczony z %s\n", num, ip.toString().c_str());
+
+            wsServer->sendTXT(num, "{\"status\":\"connected\",\"mode\":" + String(currentMode == WEB_CONTROL ? "\"web\"" : "\"ml\"") + "}");
+        }
+        break;
+        case WStype_TEXT:
+        {
+            Serial.printf("WebSocket %u odebrano: %s\n", num, payload);
+
+            DynamicJsonDocument doc(1024);
+            DeserializationError error = deserializeJson(doc, payload);
+            if (error)
+            {
+                Serial.printf("Bład deserializacji JSON: %s\n", error.c_str());
+                wsServer->sendTXT(num, "{\"success\": false, \"message\": \"Bład deserializacji JSON\"}");
+                return;
+            }
+
+            if (doc.containsKey("mode"))
+            {
+                String mode = doc["mode"];
+                if (mode == "web")
+                {
+                    currentMode = WEB_CONTROL;
+                    wsServer->broadcastTXT("{\"status\":\"mode_changed\",\"mode\":\"web\"}");
+                    Serial.println("Kontrola zmieniona na kontrole WEB");
+                }
+                else if (mode == "ml")
+                {
+                    currentMode = ML_CONTROL;
+                    wsServer->broadcastTXT("{\"status\":\"mode_changed\",\"mode\":\"ml\"}");
+                    Serial.println("Kontrola zmieniona na kontrole ML");
+                }
+            }
+
+            // interpretacja komendy zależnie od akutalnego trybu sterowania
+            if (doc.containsKey("command")) {
+                String command = doc["command"];
+                
+                // jesli w ML trybie to tylko kontrole ML zezwalamy
+                if (currentMode == ML_CONTROL && doc.containsKey("source") && doc["source"] == "ml") {
+                    processCommand(command, doc);
+                }
+                // vice versa
+                else if (currentMode == WEB_CONTROL && doc.containsKey("source") && doc["source"] == "web") {
+                    processCommand(command, doc);
+                }
+                else {
+                    Serial.println("Komenda odrzucona z powodu zlego argumentu 'source'");
+                    wsServer->sendTXT(num, "{\"status\":\"error\",\"message\":\"Komenda odrzucona z powodu zlego argumentu 'source'\"}");
+                }
+            }
+        }
+        break;
+    }
+}
+
+// Process movement commands from either source
+void processCommand(const String& command, const JsonDocument& doc) 
+{
+    if (command == "forward") {
+        moveForward();
+        if (wsServer) wsServer->broadcastTXT("{\"status\":\"moving\",\"direction\":\"forward\"}");
+    } 
+    else if (command == "backward") {
+        moveBackward();
+        if (wsServer) wsServer->broadcastTXT("{\"status\":\"moving\",\"direction\":\"backward\"}");
+    } 
+    else if (command == "left") {
+        turnLeft();
+        if (wsServer) wsServer->broadcastTXT("{\"status\":\"moving\",\"direction\":\"left\"}");
+    } 
+    else if (command == "right") {
+        turnRight();
+        if (wsServer) wsServer->broadcastTXT("{\"status\":\"moving\",\"direction\":\"right\"}");
+    } 
+    else if (command == "stop") {
+        stopMotors();
+        if (wsServer) wsServer->broadcastTXT("{\"status\":\"stopped\"}");
+    } 
+    else if (command == "speed" && doc.containsKey("left") && doc.containsKey("right")) {
+        int leftSpeed = doc["left"];
+        int rightSpeed = doc["right"];
+        setMotorSpeed(leftSpeed, rightSpeed);
+        if (wsServer) {
+            String response = "{\"status\":\"speed_set\",\"left\":" + String(leftSpeed) + ",\"right\":" + String(rightSpeed) + "}";
+            wsServer->broadcastTXT(response);
+        }
+    }
+}
+
+void setupAPIEndpoints(WebServer& server) 
+{
     api_server_ptr = &server;
     
     // routy API
@@ -15,12 +125,14 @@ void setupAPIEndpoints(WebServer& server) {
     server.on("/api/motor", HTTP_POST, handleAPIMotorControl);
     server.on("/api/status", HTTP_GET, handleAPIStatus);
     server.on("/api/docs", HTTP_GET, handleAPIDocs);
+    server.on("/api/mode", HTTP_ANY, handleAPIMode);
     
     Serial.println("API endpoints configured");
 }
 
 // root API do wyświetlania dostępnych endpointów
-void handleAPIRoot() {
+void handleAPIRoot() 
+{
     if (!api_server_ptr) return;
     
     StaticJsonDocument<512> doc;
@@ -41,7 +153,8 @@ void handleAPIRoot() {
 }
 
 // Informacje o urządzeniu
-void handleAPIInfo() {
+void handleAPIInfo() 
+{
     if (!api_server_ptr) return;
     
     StaticJsonDocument<512> doc;
@@ -62,7 +175,8 @@ void handleAPIInfo() {
 }
 
 // Motor control via API
-void handleAPIMotorControl() {
+void handleAPIMotorControl() 
+{
     if (!api_server_ptr) return;
     
     // sprawdzenie, czy dane są przesyłane
@@ -155,7 +269,8 @@ void handleAPIMotorControl() {
 }
 
 // status pojazdu
-void handleAPIStatus() {
+void handleAPIStatus() 
+{
     if (!api_server_ptr) return;
     
     StaticJsonDocument<512> doc;
@@ -176,7 +291,8 @@ void handleAPIStatus() {
 }
 
 // funkcje pomocnicze
-String createJSONResponse(bool success, const String& message, JsonObject& data) {
+String createJSONResponse(bool success, const String& message, JsonObject& data) 
+{
     StaticJsonDocument<512> doc;
     doc["success"] = success;
     doc["message"] = message;
@@ -188,7 +304,8 @@ String createJSONResponse(bool success, const String& message, JsonObject& data)
 }
 
 // Add this new handler function
-void handleAPIDocs() {
+void handleAPIDocs() 
+{
     if (!api_server_ptr) return;
     
     String html = "<!DOCTYPE html>";
@@ -296,8 +413,123 @@ void handleAPIDocs() {
     html += "  document.getElementById('curl-output').textContent = curlCommand;";
     html += "}";
     html += "</script>";
+
+    // WebSocket info
+    html += "<div class='endpoint'>";
+    html += "<h2>WebSocket Interface</h2>";
+    html += "<p>The vehicle provides a WebSocket interface on port 81 for real-time control.</p>";
+    html += "<h3>Connection:</h3>";
+    html += "<pre>ws://" + WiFi.softAPIP().toString() + ":81</pre>";
+    html += "<h3>Message Format:</h3>";
+    html += "<pre>{<br>  \"source\": \"web|ml\",  // Source of the command<br>  \"command\": \"forward|backward|left|right|stop|speed\",<br>  \"left\": 100,   // Only for 'speed' command<br>  \"right\": 100   // Only for 'speed' command<br>}</pre>";
+    html += "<h3>Mode Selection:</h3>";
+    html += "<pre>{<br>  \"mode\": \"web|ml\"  // Switch between web control and ML control<br>}</pre>";
+    html += "</div>";
+
+    // Add mode control form
+    html += "<div class='endpoint'>";
+    html += "<h2><span class='method post'>POST</span> /api/mode</h2>";
+    html += "<p>Changes the control mode between web interface and ML application.</p>";
+    html += "<h3>Request Format:</h3>";
+    html += "<pre>{<br>  \"mode\": \"web|ml\"<br>}</pre>";
+    html += "<h3>Response Example:</h3>";
+    html += "<pre>{<br>  \"success\": true,<br>  \"message\": \"Mode changed to web control\"<br>}</pre>";
+    html += "<div class='curl-form'>";
+    html += "<h3>Set Control Mode:</h3>";
+    html += "<select id='control-mode'>";
+    html += "<option value='web'>Web Control</option>";
+    html += "<option value='ml'>ML Control</option>";
+    html += "</select>";
+    html += "<button onclick='setMode()'>Set Mode</button>";
+    html += "<div class='result'><pre id='mode-output'></pre></div>";
+    html += "</div>";
+    html += "</div>";
+
+    // Add JavaScript for the mode setter
+    html += "<script>";
+    html += "function setMode() {";
+    html += "  const mode = document.getElementById('control-mode').value;";
+    html += "  const jsonData = {mode: mode};";
+    html += "  const jsonString = JSON.stringify(jsonData);";
+    html += "  const serverAddress = window.location.hostname;";
+    html += "  fetch(`http://${serverAddress}/api/mode`, {";
+    html += "    method: 'POST',";
+    html += "    headers: {";
+    html += "      'Content-Type': 'application/json'";
+    html += "    },";
+    html += "    body: jsonString";
+    html += "  })";
+    html += "  .then(response => response.json())";
+    html += "  .then(data => {";
+    html += "    document.getElementById('mode-output').textContent = JSON.stringify(data, null, 2);";
+    html += "  })";
+    html += "  .catch(error => {";
+    html += "    document.getElementById('mode-output').textContent = 'Error: ' + error;";
+    html += "  });";
+    html += "}";
+    html += "</script>";
     
     html += "</body></html>";
     
     api_server_ptr->send(200, "text/html", html);
+}
+
+void handleAPIMode() 
+{
+    if (!api_server_ptr) return;
+    
+    if (api_server_ptr->method() == HTTP_GET) {
+        // Return current mode
+        StaticJsonDocument<256> doc;
+        doc["success"] = true;
+        doc["message"] = "Current control mode";
+        
+        JsonObject data = doc.createNestedObject("data");
+        data["mode"] = currentMode == WEB_CONTROL ? "web" : "ml";
+        
+        String response;
+        serializeJson(doc, response);
+        
+        api_server_ptr->send(200, "application/json", response);
+    }
+    else if (api_server_ptr->method() == HTTP_POST) {
+        // Change mode
+        if (api_server_ptr->hasArg("plain") == false) {
+            api_server_ptr->send(400, "application/json", "{\"success\":false,\"message\":\"No data provided\"}");
+            return;
+        }
+        
+        String data = api_server_ptr->arg("plain");
+        StaticJsonDocument<256> doc;
+        DeserializationError error = deserializeJson(doc, data);
+        
+        if (error) {
+            api_server_ptr->send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON\"}");
+            return;
+        }
+        
+        if (doc.containsKey("mode")) {
+            String mode = doc["mode"];
+            if (mode == "web") {
+                currentMode = WEB_CONTROL;
+                if (wsServer) wsServer->broadcastTXT("{\"status\":\"mode_changed\",\"mode\":\"web\"}");
+                api_server_ptr->send(200, "application/json", "{\"success\":true,\"message\":\"Mode changed to web control\"}");
+            } else if (mode == "ml") {
+                currentMode = ML_CONTROL;
+                if (wsServer) wsServer->broadcastTXT("{\"status\":\"mode_changed\",\"mode\":\"ml\"}");
+                api_server_ptr->send(200, "application/json", "{\"success\":true,\"message\":\"Mode changed to ML control\"}");
+            } else {
+                api_server_ptr->send(400, "application/json", "{\"success\":false,\"message\":\"Invalid mode. Use 'web' or 'ml'\"}");
+            }
+        } else {
+            api_server_ptr->send(400, "application/json", "{\"success\":false,\"message\":\"No mode specified\"}");
+        }
+    }
+}
+
+void setupWebSocketServer(WebSocketsServer& ws_server) 
+{
+    wsServer = &ws_server;
+    wsServer->onEvent(webSocketEvent);
+    Serial.println("Serwer WebSocket przypisany");
 }
