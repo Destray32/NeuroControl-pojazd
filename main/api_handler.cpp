@@ -10,9 +10,58 @@ enum ControlMode
     ML_CONTROL
 };
 
+enum SpeedMode
+{
+    SPEED_LOW,
+    SPEED_NORMAL,
+    SPEED_HIGH
+};
+
 ControlMode currentMode = WEB_CONTROL; // domyślnie kontrola to manualna przez serwer web
+SpeedMode currentSpeedMode = SPEED_NORMAL; // domyślny tryb prędkości to normalny
 WebSocketsServer* wsServer = nullptr;
 WebServer* api_server_ptr = nullptr;
+
+// Funkcja do ustawienia aktualnej prędkości silników na podstawie wybranego trybu
+int getCurrentSpeedValue() {
+    switch(currentSpeedMode) {
+        case SPEED_LOW:
+            return SPEED_MODE_LOW;
+        case SPEED_HIGH:
+            return SPEED_MODE_HIGH;
+        case SPEED_NORMAL:
+        default:
+            return SPEED_MODE_NORMAL;
+    }
+}
+
+// Konwersja trybu prędkości na string
+String getSpeedModeString() {
+    switch(currentSpeedMode) {
+        case SPEED_LOW:
+            return "low";
+        case SPEED_HIGH:
+            return "high";
+        case SPEED_NORMAL:
+        default:
+            return "normal";
+    }
+}
+
+// Konwersja stringa na tryb prędkości
+bool setSpeedModeFromString(const String& mode) {
+    if (mode == "low") {
+        currentSpeedMode = SPEED_LOW;
+        return true;
+    } else if (mode == "normal") {
+        currentSpeedMode = SPEED_NORMAL;
+        return true;
+    } else if (mode == "high") {
+        currentSpeedMode = SPEED_HIGH;
+        return true;
+    }
+    return false;
+}
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
 {
@@ -110,7 +159,25 @@ void processCommand(const String& command, const JsonDocument& doc)
         setMotorSpeed(leftSpeed, rightSpeed);
         if (wsServer) {
             String response = "{\"status\":\"speed_set\",\"left\":" + String(leftSpeed) + ",\"right\":" + String(rightSpeed) + "}";
+
             wsServer->broadcastTXT(response);
+        }
+    }
+    else if (command == "set_speed_mode" && doc.containsKey("mode")) {
+        String mode = doc["mode"];
+        bool success = setSpeedModeFromString(mode);
+        if (success) {
+            if (wsServer) {
+                String response = "{\"status\":\"speed_mode_changed\",\"mode\":\"" + mode + "\"}";
+                wsServer->broadcastTXT(response);
+            }
+            Serial.println("Speed mode changed to: " + mode);
+        }
+        else {
+            if (wsServer) {
+                wsServer->broadcastTXT("{\"status\":\"error\",\"message\":\"Invalid speed mode. Use 'low', 'normal', or 'high'\"}");
+            }
+            Serial.println("Invalid speed mode: " + mode);
         }
     }
 }
@@ -122,7 +189,7 @@ void setupAPIEndpoints(WebServer& server)
     // routy API
     server.on("/api", HTTP_GET, handleAPIRoot);
     server.on("/api/info", HTTP_GET, handleAPIInfo);
-    server.on("/api/motor", HTTP_POST, handleAPIMotorControl);
+    server.on("/api/motor", HTTP_ANY, handleAPIMotorControl);
     server.on("/api/status", HTTP_GET, handleAPIStatus);
     server.on("/api/docs", HTTP_GET, handleAPIDocs);
     server.on("/api/mode", HTTP_ANY, handleAPIMode);
@@ -145,6 +212,8 @@ void handleAPIRoot()
     endpoints.add("/api/info");
     endpoints.add("/api/motor");
     endpoints.add("/api/status");
+    endpoints.add("/api/docs");
+    endpoints.add("/api/mode");
     
     String response;
     serializeJson(doc, response);
@@ -163,9 +232,9 @@ void handleAPIInfo()
     
     JsonObject data = doc.createNestedObject("data");
     data["device"] = "NeuroVehicle";
-    data["version"] = "1.0.0";
+    data["version"] = "2.2.0";
     data["ip"] = WiFi.softAPIP().toString();
-    data["mac"] = WiFi.macAddress();
+    data["mac"] = WiFi.softAPmacAddress();
     data["uptime"] = millis() / 1000; // uptime w sekundach
     
     String response;
@@ -178,6 +247,22 @@ void handleAPIInfo()
 void handleAPIMotorControl() 
 {
     if (!api_server_ptr) return;
+    
+    // Dla metody GET zwracamy aktualny stan silników i tryb prędkości
+    if (api_server_ptr->method() == HTTP_GET) {
+        StaticJsonDocument<256> doc;
+        doc["success"] = true;
+        doc["message"] = "Motor status";
+        
+        JsonObject data = doc.createNestedObject("data");
+        data["speed_mode"] = getSpeedModeString();
+        
+        String response;
+        serializeJson(doc, response);
+        
+        api_server_ptr->send(200, "application/json", response);
+        return;
+    }
     
     // sprawdzenie, czy dane są przesyłane
     if (api_server_ptr->hasArg("plain") == false) {
@@ -233,6 +318,32 @@ void handleAPIMotorControl()
             int rightSpeed = doc["right"];
             setMotorSpeed(leftSpeed, rightSpeed);
         } 
+        else if (command == "set_speed_mode" && doc.containsKey("mode")) {
+            String mode = doc["mode"];
+            bool success = setSpeedModeFromString(mode);
+            
+            if (success) {
+                StaticJsonDocument<256> responseDoc;
+                responseDoc["success"] = true;
+                responseDoc["message"] = "Speed mode set to: " + mode;
+                
+                String response;
+                serializeJson(responseDoc, response);
+                
+                api_server_ptr->send(200, "application/json", response);
+                return;
+            } else {
+                StaticJsonDocument<256> errorDoc;
+                errorDoc["success"] = false;
+                errorDoc["message"] = "Invalid speed mode. Use 'low', 'normal', or 'high'";
+                
+                String errorResponse;
+                serializeJson(errorDoc, errorResponse);
+                
+                api_server_ptr->send(400, "application/json", errorResponse);
+                return;
+            }
+        }
         else {
             StaticJsonDocument<256> errorDoc;
             errorDoc["success"] = false;
@@ -283,6 +394,9 @@ void handleAPIStatus()
     data["battery_voltage"] = analogRead(34) * (3.3 / 4095.0); // Przykładowe odczytanie napięcia z pinu 34
     data["free_heap"] = ESP.getFreeHeap();
     data["uptime"] = millis() / 1000; // Uptime in seconds
+    data["signal_strength"] = WiFi.RSSI(); // Siła sygnału WiFi
+    data["motor_speed_mode"] = getSpeedModeString(); // Aktualny tryb prędkości
+    data["control_mode"] = (currentMode == WEB_CONTROL) ? "web" : "ml";
     
     String response;
     serializeJson(doc, response);
@@ -406,9 +520,9 @@ void handleAPIDocs()
     
     html += "  const jsonString = JSON.stringify(jsonData, null, 2);";
     html += "  const serverAddress = window.location.hostname;";
-    html += "  const curlCommand = `curl -X POST http://${serverAddress}/api/motor \\
-    -H \"Content-Type: application/json\" \\
-    -d '${jsonString}'`;";
+    html += "  const curlCommand = `curl -X POST http://${serverAddress}/api/motor \\\\";
+    html += "    -H \"Content-Type: application/json\" \\\\";
+    html += "    -d '${jsonString}'`;";
     
     html += "  document.getElementById('curl-output').textContent = curlCommand;";
     html += "}";

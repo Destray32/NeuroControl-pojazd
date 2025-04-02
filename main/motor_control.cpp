@@ -2,6 +2,8 @@
 #include "config.h"
 #include <Arduino.h>
 
+extern int getCurrentSpeedValue(); // Deklaracja funkcji z innego pliku
+
 // Inicjalizacja pinów silników
 void setupMotors()
 {
@@ -20,60 +22,66 @@ void setupMotors()
 // Funkcja do jazdy pojazdem do przodu
 void moveForward()
 {
-    Serial.println("Jazda do przodu");
+    int currentSpeed = getCurrentSpeedValue();
+    Serial.println("Jazda do przodu (prędkość: " + String(currentSpeed) + ")");
 
     // Lewy silnik do przodu
     // digitalWrite(LEFT_MOTOR_ENA, HIGH);
-    analogWrite(LEFT_MOTOR_IN1, MOTOR_SPEED);
+    analogWrite(LEFT_MOTOR_IN1, currentSpeed);
     analogWrite(LEFT_MOTOR_IN2, 0);
 
     // Prawy silnik do przodu
     // digitalWrite(RIGHT_MOTOR_ENB, HIGH);
     analogWrite(RIGHT_MOTOR_IN3, 0);
-    analogWrite(RIGHT_MOTOR_IN4, MOTOR_SPEED);
+    analogWrite(RIGHT_MOTOR_IN4, currentSpeed);
 }
 
 // Funkcja do jazdy pojazdem do tyłu
 void moveBackward()
 {
-    Serial.println("Jazda do tyłu");
+    int currentSpeed = getCurrentSpeedValue();
+    Serial.println("Jazda do tyłu (prędkość: " + String(currentSpeed) + ")");
 
-    analogWrite(RIGHT_MOTOR_IN3, 100);
+    analogWrite(RIGHT_MOTOR_IN3, currentSpeed);
     analogWrite(RIGHT_MOTOR_IN4, 0);
 
     analogWrite(LEFT_MOTOR_IN1, 0);
-    analogWrite(LEFT_MOTOR_IN2, 100);
+    analogWrite(LEFT_MOTOR_IN2, currentSpeed);
 }
 
 // Funkcja do skręcania pojazdem w lewo
 void turnLeft()
 {
-    Serial.println("Skręt w lewo");
+    // Dla skrętów używamy 80% aktualnej prędkości
+    int currentSpeed = getCurrentSpeedValue() * 0.8;
+    Serial.println("Skręt w lewo (prędkość: " + String(currentSpeed) + ")");
 
     // Lewy silnik stop lub do tyłu
     // digitalWrite(LEFT_MOTOR_ENA, HIGH);
     analogWrite(LEFT_MOTOR_IN1, 0);
-    analogWrite(LEFT_MOTOR_IN2, TURN_SPEED);
+    analogWrite(LEFT_MOTOR_IN2, currentSpeed);
 
     // Prawy silnik do przodu
     // digitalWrite(RIGHT_MOTOR_ENB, HIGH);
     analogWrite(RIGHT_MOTOR_IN3, 0);
-    analogWrite(RIGHT_MOTOR_IN4, 0);
+    analogWrite(RIGHT_MOTOR_IN4, currentSpeed);
 }
 
 // Funkcja do skręcania pojazdem w prawo
 void turnRight()
 {
-    Serial.println("Skręt w prawo");
+    // Dla skrętów używamy 80% aktualnej prędkości
+    int currentSpeed = getCurrentSpeedValue() * 0.8;
+    Serial.println("Skręt w prawo (prędkość: " + String(currentSpeed) + ")");
 
     // Lewy silnik do przodu
     // digitalWrite(LEFT_MOTOR_ENA, HIGH);
-    analogWrite(LEFT_MOTOR_IN1, TURN_SPEED);
+    analogWrite(LEFT_MOTOR_IN1, currentSpeed);
     analogWrite(LEFT_MOTOR_IN2, 0);
 
     // Prawy silnik stop lub do tyłu
     // digitalWrite(RIGHT_MOTOR_ENB, HIGH);
-    analogWrite(RIGHT_MOTOR_IN3, 0);
+    analogWrite(RIGHT_MOTOR_IN3, currentSpeed);
     analogWrite(RIGHT_MOTOR_IN4, 0);
 }
 

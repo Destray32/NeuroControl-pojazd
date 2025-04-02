@@ -10,6 +10,11 @@
 #define RIGHT_MOTOR_IN3 25  // Pin wejściowy 3 dla prawego silnika
 #define RIGHT_MOTOR_IN4 26  // Pin wejściowy 4 dla prawego silnika
 
+// tryby prędkości
+#define SPEED_MODE_LOW 60      // Prędkość w trybie niskim
+#define SPEED_MODE_NORMAL 100  // Prędkość w trybie normalnym (domyślna)
+#define SPEED_MODE_HIGH 150    // Prędkość w trybie wysokim
+
 #define MOTOR_SPEED 100     // Domyślna prędkość silnika (0-255)
 #define TURN_SPEED 80       // Prędkość dla skręcania (0-255)
 
