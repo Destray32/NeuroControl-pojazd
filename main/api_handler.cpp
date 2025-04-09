@@ -22,6 +22,23 @@ SpeedMode currentSpeedMode = SPEED_NORMAL; // domyślny tryb prędkości to norm
 WebSocketsServer* wsServer = nullptr;
 WebServer* api_server_ptr = nullptr;
 
+void addCORSHeaders()
+{
+    if (!api_server_ptr) return;
+    api_server_ptr->sendHeader("Access-Control-Allow-Origin", "*");
+    api_server_ptr->sendHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    api_server_ptr->sendHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    api_server_ptr->sendHeader("Access-Control-Max-Age", "86400"); // 24 hours cache
+}
+
+void handleOptions()
+{
+    if (!api_server_ptr) return;
+
+    addCORSHeaders();
+    api_server_ptr->send(200, "text/plain", "OK");
+}
+
 // Funkcja do ustawienia aktualnej prędkości silników na podstawie wybranego trybu
 int getCurrentSpeedValue() {
     switch(currentSpeedMode) {
@@ -67,6 +84,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
 {
     switch (type)
     {
+        case WStype_ERROR:
+            Serial.printf("WebSocket %u ERROR\n", num);
+            break;
         case WStype_DISCONNECTED:
             Serial.printf("WebSocket %u rozlaczony\n", num);
             break;
@@ -185,6 +205,14 @@ void processCommand(const String& command, const JsonDocument& doc)
 void setupAPIEndpoints(WebServer& server) 
 {
     api_server_ptr = &server;
+
+    // requesty OPTIONS dla wszystkich endpointów
+    server.on("/api", HTTP_OPTIONS, handleOptions);
+    server.on("/api/info", HTTP_OPTIONS, handleOptions);
+    server.on("/api/motor", HTTP_OPTIONS, handleOptions);
+    server.on("/api/status", HTTP_OPTIONS, handleOptions);
+    server.on("/api/docs", HTTP_OPTIONS, handleOptions);
+    server.on("/api/mode", HTTP_OPTIONS, handleOptions);
     
     // routy API
     server.on("/api", HTTP_GET, handleAPIRoot);
@@ -201,6 +229,8 @@ void setupAPIEndpoints(WebServer& server)
 void handleAPIRoot() 
 {
     if (!api_server_ptr) return;
+
+    addCORSHeaders();
     
     StaticJsonDocument<512> doc;
     doc["success"] = true;
@@ -225,6 +255,8 @@ void handleAPIRoot()
 void handleAPIInfo() 
 {
     if (!api_server_ptr) return;
+
+    addCORSHeaders();
     
     StaticJsonDocument<512> doc;
     doc["success"] = true;
@@ -247,6 +279,8 @@ void handleAPIInfo()
 void handleAPIMotorControl() 
 {
     if (!api_server_ptr) return;
+
+    addCORSHeaders();
     
     // Dla metody GET zwracamy aktualny stan silników i tryb prędkości
     if (api_server_ptr->method() == HTTP_GET) {
@@ -383,6 +417,8 @@ void handleAPIMotorControl()
 void handleAPIStatus() 
 {
     if (!api_server_ptr) return;
+
+    addCORSHeaders();
     
     StaticJsonDocument<512> doc;
     doc["success"] = true;
@@ -421,6 +457,8 @@ String createJSONResponse(bool success, const String& message, JsonObject& data)
 void handleAPIDocs() 
 {
     if (!api_server_ptr) return;
+
+    addCORSHeaders();
     
     String html = "<!DOCTYPE html>";
     html += "<html><head><title>NeuroVehicle API Documentation</title>";
@@ -591,6 +629,8 @@ void handleAPIDocs()
 void handleAPIMode() 
 {
     if (!api_server_ptr) return;
+
+    addCORSHeaders();
     
     if (api_server_ptr->method() == HTTP_GET) {
         // Return current mode
@@ -644,6 +684,18 @@ void handleAPIMode()
 void setupWebSocketServer(WebSocketsServer& ws_server) 
 {
     wsServer = &ws_server;
+    
+    // Set up header validation to allow any origin
+    wsServer->onValidateHttpHeader([](String headerName, String headerValue) {
+        if (headerName.equalsIgnoreCase("Origin")) {
+            // Accept any origin
+            Serial.printf("WebSocket connection from origin: %s\n", headerValue.c_str());
+            return true;
+        }
+        // Accept all other headers
+        return true;
+    }, nullptr, 0);
+    
     wsServer->onEvent(webSocketEvent);
-    Serial.println("Serwer WebSocket przypisany");
+    Serial.println("Serwer WebSocket przypisany z obsługą CORS");
 }

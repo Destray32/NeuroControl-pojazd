@@ -20,7 +20,7 @@
 
 // Ustawienia punktu dostępu WiFi
 #define AP_SSID "NeuroVehicle"      // Nazwa sieci WiFi pojazdu
-#define AP_PASSWORD "neurocontrol"  // Hasło do sieci WiFi pojazdu
+#define AP_PASSWORD "123456789"  // Hasło do sieci WiFi pojazdu
 
 #define LOCAL_IP_ADDRESS 192,168,4,1
 #define GATEWAY_ADDRESS 192,168,4,1

@@ -6,10 +6,11 @@
 #include "motor_control.h"
 #include "web_server.h"
 #include "api_handler.h"
+#include "camera_control.h"
 
 // Utworzenie serwera web na porcie 80
 WebServer server(80);
-WebSocketsServer webSocket = WebSocketsServer(82);
+WebSocketsServer webSocket = WebSocketsServer(82, "*");
 
 void setup() {
   Serial.begin(9600);
@@ -31,13 +32,23 @@ void setup() {
   Serial.println(AP_SSID);
   Serial.print("Adres IP: ");
   Serial.println(WiFi.softAPIP());
+
+  // Inicjalizacja kamery
+  if (setupCamera()) {
+    Serial.println("Kamery zainicjowano pomyślnie");
+  } else {
+    Serial.println("Błąd inicjalizacji kamery");
+  }
   
   // Inicjalizacja serwera webowego
   setupWebServer(server);
 
+  startCameraServer(server); // uruchomienie serwera kamery
+
   // inicjalizowanie serwerów WebSocket
   setupWebSocketServer(webSocket);
   webSocket.begin();
+  webSocket.enableHeartbeat(15000, 3000, 2);
   Serial.println("Serwer WebSocket uruchomiony na porcie 82");
 }
 
