@@ -6,6 +6,7 @@
 #include "motor_control.h"
 #include "web_server.h"
 #include "api_handler.h"
+#include "sensor_control.h"
 #include "camera_control.h"
 
 // Utworzenie serwera web na porcie 80
@@ -17,6 +18,7 @@ void setup() {
 
   // Inicjalizacja silników
   setupMotors();
+  setupSensor();
   
   // Konfiguracja punktu dostępu WiFi
   WiFi.softAP(AP_SSID, AP_PASSWORD);
@@ -56,5 +58,6 @@ void loop() {
   // Obsługa żądań klientów
   server.handleClient();
   webSocket.loop();
+  handleSensorWebSocket(); // obsługa WebSocket dla sensora
   delay(2);  // Małe opóźnienie dla stabilności
 }

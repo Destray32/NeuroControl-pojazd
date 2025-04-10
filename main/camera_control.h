@@ -1,5 +1,3 @@
-
-
 #ifndef CAMERA_CONTROL_H
 #define CAMERA_CONTROL_H
 
@@ -7,7 +5,6 @@
 #include <WebServer.h>
 #include <WiFi.h>
 #include "esp_camera.h"
-
 
 // piny kamery
 #define PWDN_GPIO_NUM     -1

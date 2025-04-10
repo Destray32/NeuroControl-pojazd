@@ -1,8 +1,12 @@
 #include "api_handler.h"
 #include "motor_control.h"
+#include "sensor_control.h"
 #include "config.h"
 #include <ArduinoJson.h>
 #include <WiFi.h>
+
+unsigned long lastSensorTime = 0;
+const unsigned long SENSOR_INTERVAL = 100;
 
 enum ControlMode 
 {
@@ -213,6 +217,7 @@ void setupAPIEndpoints(WebServer& server)
     server.on("/api/status", HTTP_OPTIONS, handleOptions);
     server.on("/api/docs", HTTP_OPTIONS, handleOptions);
     server.on("/api/mode", HTTP_OPTIONS, handleOptions);
+    server.on("/api/sensor", HTTP_OPTIONS, handleOptions);
     
     // routy API
     server.on("/api", HTTP_GET, handleAPIRoot);
@@ -221,6 +226,7 @@ void setupAPIEndpoints(WebServer& server)
     server.on("/api/status", HTTP_GET, handleAPIStatus);
     server.on("/api/docs", HTTP_GET, handleAPIDocs);
     server.on("/api/mode", HTTP_ANY, handleAPIMode);
+    server.on("/api/sensor", HTTP_ANY, handleAPISensor); // endpoint do obsługi sensora HC-SR04
     
     Serial.println("API endpoints configured");
 }
@@ -264,7 +270,7 @@ void handleAPIInfo()
     
     JsonObject data = doc.createNestedObject("data");
     data["device"] = "NeuroVehicle";
-    data["version"] = "2.2.0";
+    data["version"] = "3.0.0";
     data["ip"] = WiFi.softAPIP().toString();
     data["mac"] = WiFi.softAPmacAddress();
     data["uptime"] = millis() / 1000; // uptime w sekundach
@@ -678,6 +684,53 @@ void handleAPIMode()
         } else {
             api_server_ptr->send(400, "application/json", "{\"success\":false,\"message\":\"No mode specified\"}");
         }
+    }
+}
+
+void handleAPISensor()
+{
+    if (!api_server_ptr) return;
+
+    addCORSHeaders();
+    
+    // Dla metody GET zwracamy aktualny stan sensora
+    if (api_server_ptr->method() == HTTP_GET) {
+        StaticJsonDocument<256> doc;
+        
+        JsonObject data = doc.createNestedObject("data");
+        data["distance"] = getDistance(); // funkcja do odczytu live danych z sensora
+        data["success"] = (data["distance"] != -1);
+        data["message"] = (data["success"]) ? "Distance retrieved successfully" : "Failed to retrieve distance";
+        
+        String response;
+        serializeJson(doc, response);
+        
+        if (data["success"]) {
+            api_server_ptr->send(200, "application/json", response);
+        } else {
+            api_server_ptr->send(500, "application/json", response);
+        }
+        return;
+    }
+}
+
+void handleSensorWebSocket() {
+    if (!wsServer || wsServer->connectedClients() == 0) return;
+    
+    unsigned long currentTime = millis();
+    if (currentTime - lastSensorTime >= SENSOR_INTERVAL) {
+        float distance = getDistance();
+        
+        DynamicJsonDocument doc(128);
+        doc["status"] = (distance != -1) ? "success" : "error";
+        doc["distance"] = (distance != -1) ? distance : 0; // zwraca dystans albo 0 w przypadku błędu
+        doc["timestamp"] = currentTime; // znacznik czasu
+        
+        String message;
+        serializeJson(doc, message);
+        
+        wsServer->broadcastTXT(message);
+        lastSensorTime = currentTime;
     }
 }
 
