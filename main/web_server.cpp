@@ -14,6 +14,7 @@ void setupWebServer(WebServer &server)
 
     // Definicja endpointów serwera
     server.on("/", handleRoot);
+    server.on("/camera", handleCamera);
     server.on("/forward", handleForward);
     server.on("/backward", handleBackward);
     server.on("/left", handleLeft);
@@ -36,9 +37,8 @@ String generateHtml()
     String html = "<html><head>";
     html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
     html += "<style>";
-    html += "body { font-fa }";
-    html += ".container { max-wmily: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }";
-    html += "h1 { color: #333;idth: 600px; margin: 0 auto; }";
+    html += "body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }";
+    html += ".container { max-width: 600px; margin: 0 auto; }";
     html += ".controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }";
     html += ".btn { font-size: 18px; padding: 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; user-select: none; touch-action: manipulation; }";
     html += ".btn:active, .btn.active { background-color: #3e8e41; }";
@@ -48,10 +48,26 @@ String generateHtml()
     html += ".status { margin-top: 20px; padding: 10px; background-color: #f1f1f1; border-radius: 5px; }";
     html += ".controls-title { margin-top: 20px; }";
     html += ".mode-controls { margin: 20px 0; }";
+    
+    // Navigation menu styling
+    html += ".navbar { overflow: hidden; background-color: #333; margin-bottom: 20px; border-radius: 5px; }";
+    html += ".navbar a { float: left; display: block; color: white; text-align: center; padding: 14px 16px; text-decoration: none; }";
+    html += ".navbar a:hover { background-color: #ddd; color: black; }";
+    html += ".navbar a.active { background-color: #4CAF50; }";
+    html += ".camera-button { background-color: #2196F3; margin-top: 20px; display: inline-block; padding: 15px 25px; }";
+    
     html += "</style>";
     html += "</head><body>";
     
     html += "<div class='container'>";
+    
+    // Navigation menu
+    html += "<div class='navbar'>";
+    html += "<a class='active' href='/'>Sterowanie</a>";
+    html += "<a href='/camera'>Kamera</a>";
+    html += "<a href='/api/docs'>API</a>";
+    html += "</div>";
+    
     html += "<h1>Sterowanie NeuroVehicle</h1>";
     
     html += "<div class='mode-controls'>";
@@ -72,11 +88,16 @@ String generateHtml()
     html += "<div class='empty'></div>";
     html += "</div>";
     
-    html += "<div class='status' id='status'>Status: Rozłaczony</div>";
+    html += "<div class='status' id='status'>Status: Rozlaczony</div>";
     html += "<div class='status' id='mode'>Tryb: Oczekiwanie...</div>";
     
+    // Camera button
+    html += "<div>";
+    html += "<a href='/camera' class='btn camera-button'>Przejdz do kamery</a>";
+    html += "</div>";
+    
     html += "<h3>Instrukcja</h3>";
-    html += "<p>Mozesz tet uzyc klawiszy WSAD oraz spacji do sterowania.</p>";
+    html += "<p>Mozesz tez uzyc klawiszy WSAD oraz spacji do sterowania.</p>";
     html += "</div>";
     
     // skrypty
@@ -208,12 +229,136 @@ String generateHtml()
     return html;
 }
 
+// Wygenerowanie html'a dla strony kamery
+String generateCameraHtml() {
+    String html = "<html><head>";
+    html += "<meta charset='utf-8'>";
+    html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+    html += "<title>NeuroVehicle - Kamera</title>";
+    html += "<style>";
+    
+    html += "body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }";
+    html += ".container { max-width: 800px; margin: 0 auto; }";
+    html += ".stream-container { margin: 20px 0; }";
+    html += "img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }";
+    html += ".navbar { overflow: hidden; background-color: #333; margin-bottom: 20px; border-radius: 5px; }";
+    html += ".navbar a { float: left; display: block; color: white; text-align: center; padding: 14px 16px; text-decoration: none; }";
+    html += ".navbar a:hover { background-color: #ddd; color: black; }";
+    html += ".navbar a.active { background-color: #2196F3; }";
+    html += ".btn { font-size: 18px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }";
+    html += ".controls { margin: 20px 0; }";
+    html += ".resolution-selector { margin: 15px 0; }";
+    html += "select { padding: 8px; border-radius: 4px; }";
+    
+    html += "</style>";
+    html += "</head><body>";
+    
+    html += "<div class='container'>";
+    
+    // Navigation menu
+    html += "<div class='navbar'>";
+    html += "<a href='/'>Sterowanie</a>";
+    html += "<a class='active' href='/camera'>Kamera</a>";
+    html += "<a href='/api/docs'>API</a>";
+    html += "</div>";
+    
+    html += "<h1>NeuroVehicle - Kamera</h1>";
+    
+    // Resolution selector
+    html += "<div class='resolution-selector'>";
+    html += "<label for='resolution'>Rozdzielczosc:</label> ";
+    html += "<select id='resolution' onchange='changeResolution(this.value)'>";
+    html += "<option value='UXGA'>UXGA (1600x1200)</option>";
+    html += "<option value='SXGA'>SXGA (1280x1024)</option>";
+    html += "<option value='XGA'>XGA (1024x768)</option>";
+    html += "<option value='SVGA' selected>SVGA (800x600)</option>";
+    html += "<option value='VGA'>VGA (640x480)</option>";
+    html += "<option value='CIF'>CIF (400x296)</option>";
+    html += "<option value='QVGA'>QVGA (320x240)</option>";
+    html += "</select>";
+    html += "</div>";
+    
+    // Camera stream
+    html += "<div class='stream-container'>";
+    html += "<img id='stream' src='/stream' alt='Ladowanie strumienia...'>";
+    html += "</div>";
+    
+    // Controls
+    html += "<div class='controls'>";
+    html += "<button class='btn' onclick='refreshStream()'>Odswiez</button>";
+    html += "<a href='/capture' target='_blank' class='btn'>Zrob zdjecie</a>";
+    html += "<a href='/' class='btn'>Powrot do sterowania</a>";
+    html += "</div>";
+    
+    // Status
+    html += "<div id='status' style='margin-top: 10px;'>Status: Ladowanie...</div>";
+    
+    // JavaScript
+    html += "<script>";
+    
+    html += "function changeResolution(resolution) {";
+    html += "  document.getElementById('status').innerText = 'Zmiana rozdzielczosci...';";
+    html += "  fetch(`/camera/resolution?res=${resolution}`, {";
+    html += "    method: 'GET'";
+    html += "  })";
+    html += "  .then(response => {";
+    html += "    if (response.ok) {";
+    html += "      refreshStream();";
+    html += "      document.getElementById('status').innerText = 'Rozdzielczosc zmieniona na: ' + resolution;";
+    html += "    } else {";
+    html += "      document.getElementById('status').innerText = 'Blad zmiany rozdzielczosci';";
+    html += "    }";
+    html += "  })";
+    html += "  .catch(error => {";
+    html += "    document.getElementById('status').innerText = 'Blad: ' + error;";
+    html += "  });";
+    html += "}";
+    
+    html += "function refreshStream() {";
+    html += "  const streamImg = document.getElementById('stream');";
+    html += "  const timestamp = new Date().getTime();";
+    html += "  streamImg.src = `/stream?t=${timestamp}`;";
+    html += "  document.getElementById('status').innerText = 'Odswiezanie strumienia...';";
+    html += "  streamImg.onload = function() {";
+    html += "    document.getElementById('status').innerText = 'Strumien aktywny';";
+    html += "  };";
+    html += "  streamImg.onerror = function() {";
+    html += "    document.getElementById('status').innerText = 'Blad ladowania strumienia';";
+    html += "  };";
+    html += "}";
+    
+    html += "// Initial status update";
+    html += "document.getElementById('stream').onload = function() {";
+    html += "  document.getElementById('status').innerText = 'Strumien aktywny';";
+    html += "};";
+    
+    html += "document.getElementById('stream').onerror = function() {";
+    html += "  document.getElementById('status').innerText = 'Blad ladowania strumienia';";
+    html += "  // Try again after 5 seconds";
+    html += "  setTimeout(refreshStream, 5000);";
+    html += "};";
+    
+    html += "</script>";
+    html += "</body></html>";
+
+    return html;
+}
+
 // Handler dla strony głównej
 void handleRoot()
 {
     if (server_ptr)
     {
         server_ptr->send(200, "text/html", generateHtml());
+    }
+}
+
+// Handler dla strony kamery
+void handleCamera()
+{
+    if (server_ptr)
+    {
+        server_ptr->send(200, "text/html", generateCameraHtml());
     }
 }
 
@@ -233,7 +378,7 @@ void handleBackward()
     moveBackward();
     if (server_ptr)
     {
-        server_ptr->send(200, "text/plain", "Jazda do tyłu");
+        server_ptr->send(200, "text/plain", "Jazda do tylu");
     }
 }
 
@@ -243,7 +388,7 @@ void handleLeft()
     turnLeft();
     if (server_ptr)
     {
-        server_ptr->send(200, "text/plain", "Skręt w lewo");
+        server_ptr->send(200, "text/plain", "Skret w lewo");
     }
 }
 
@@ -253,7 +398,7 @@ void handleRight()
     turnRight();
     if (server_ptr)
     {
-        server_ptr->send(200, "text/plain", "Skręt w prawo");
+        server_ptr->send(200, "text/plain", "Skret w prawo");
     }
 }
 

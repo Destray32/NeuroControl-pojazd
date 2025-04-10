@@ -3,72 +3,6 @@
 int streamingClients = 0;
 bool isStreaming = false;
 
-const char CAMERA_INDEX_HTML[] = R"rawliteral(
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>NeuroVehicle Camera</title>
-      <style>
-        body { font-family: Arial, Helvetica, sans-serif; text-align: center; margin: 0; padding: 0; }
-        .navbar { background-color: #333; overflow: hidden; position: fixed; top: 0; width: 100%; }
-        .navbar a { float: left; display: block; color: #f2f2f2; text-align: center; padding: 14px 16px; text-decoration: none; }
-        .navbar a:hover { background-color: #ddd; color: black; }
-        .content { padding: 60px 20px 20px; }
-        img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; padding: 5px; }
-        .stream-container { margin-top: 20px; }
-        .resolution-selector { margin-bottom: 20px; }
-      </style>
-    </head>
-    <body>
-      <div class="navbar">
-        <a href="/">Home</a>
-        <a href="/camera" class="active">Camera</a>
-        <a href="/api/docs">API Docs</a>
-        <a href="/control">Control</a>
-      </div>
-      <div class="content">
-        <h1>NeuroVehicle Camera Stream</h1>
-        <div class="resolution-selector">
-          <label for="resolution">Resolution:</label>
-          <select id="resolution" onchange="changeResolution(this.value)">
-            <option value="UXGA">UXGA (1600x1200)</option>
-            <option value="SXGA">SXGA (1280x1024)</option>
-            <option value="XGA">XGA (1024x768)</option>
-            <option value="SVGA" selected>SVGA (800x600)</option>
-            <option value="VGA">VGA (640x480)</option>
-            <option value="CIF">CIF (400x296)</option>
-            <option value="QVGA">QVGA (320x240)</option>
-          </select>
-        </div>
-        <div class="stream-container">
-          <img id="stream" src="/stream" alt="Camera Stream">
-        </div>
-      </div>
-      <script>
-        function changeResolution(resolution) {
-          fetch(`/camera/resolution?res=${resolution}`, {
-            method: 'GET'
-          })
-          .then(response => {
-            if (response.ok) {
-              const streamImg = document.getElementById('stream');
-              // Add timestamp to bust cache
-              streamImg.src = `/stream?t=${new Date().getTime()}`;
-            } else {
-              alert('Failed to change resolution');
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-          });
-        }
-      </script>
-    </body>
-    </html>
-    )rawliteral";
-
 bool setupCamera()
 {
     camera_config_t config;
@@ -248,13 +182,13 @@ void handleStream(WebServer& server) {
   streamMJPEG(client);
 }
 
-void handleCameraPage(WebServer& server) {
-  server.send(200, "text/html", CAMERA_INDEX_HTML);
+void handleNotFound(WebServer& server) {
+  server.send(404, "text/plain", "Not Found");
 }
 
 void startCameraServer(WebServer& server) {
-  server.on("/camera", HTTP_GET, [&]() { handleCameraPage(server); });
   server.on("/capture", HTTP_GET, [&]() { handleCapture(server); });
   server.on("/stream", HTTP_GET, [&]() { handleStream(server); });
   server.on("/camera/resolution", HTTP_GET, [&]() { handleResolution(server); });
+  server.onNotFound([&]() { handleNotFound(server); });
 }

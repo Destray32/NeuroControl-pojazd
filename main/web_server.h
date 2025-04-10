@@ -6,6 +6,7 @@
 // Funkcje do obsługi serwera
 void setupWebServer(WebServer& server);
 void handleRoot();
+void handleCamera();
 void handleForward();
 void handleBackward();
 void handleLeft();
