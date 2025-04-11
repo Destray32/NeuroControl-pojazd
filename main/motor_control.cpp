@@ -1,4 +1,5 @@
 #include "motor_control.h"
+#include "sensor_control.h"
 #include "config.h"
 #include <Arduino.h>
 
@@ -22,6 +23,17 @@ void setupMotors()
 // Funkcja do jazdy pojazdem do przodu
 void moveForward()
 {
+    setForwardMovement(true);
+    // sprawdzenie dystantu do przeszkody z przodu
+    float distance = getDistance();
+
+    if (distance <= 16.0 && distance > 0.0)
+    {
+        Serial.println("Zatrzymanie silników z powodu przeszkody z przodu (dystans: " + String(distance) + ")");
+        stopMotors();
+        return;
+    }
+
     int currentSpeed = getCurrentSpeedValue();
     Serial.println("Jazda do przodu (prędkość: " + String(currentSpeed) + ")");
 
@@ -39,6 +51,7 @@ void moveForward()
 // Funkcja do jazdy pojazdem do tyłu
 void moveBackward()
 {
+    setForwardMovement(false);
     int currentSpeed = getCurrentSpeedValue();
     Serial.println("Jazda do tyłu (prędkość: " + String(currentSpeed) + ")");
 
@@ -52,6 +65,7 @@ void moveBackward()
 // Funkcja do skręcania pojazdem w lewo
 void turnLeft()
 {
+    setForwardMovement(false);
     // Dla skrętów używamy 80% aktualnej prędkości
     int currentSpeed = getCurrentSpeedValue() * 0.8;
     Serial.println("Skręt w lewo (prędkość: " + String(currentSpeed) + ")");
@@ -70,6 +84,7 @@ void turnLeft()
 // Funkcja do skręcania pojazdem w prawo
 void turnRight()
 {
+    setForwardMovement(false);
     // Dla skrętów używamy 80% aktualnej prędkości
     int currentSpeed = getCurrentSpeedValue() * 0.8;
     Serial.println("Skręt w prawo (prędkość: " + String(currentSpeed) + ")");
@@ -88,6 +103,7 @@ void turnRight()
 // Funkcja do zatrzymania wszystkich silników
 void stopMotors()
 {
+    setForwardMovement(false);
     Serial.println("Zatrzymanie silników");
 
     // Zatrzymanie lewego silnika

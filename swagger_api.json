@@ -1,0 +1,667 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "NeuroVehicle API",
+      "description": "API for controlling the NeuroVehicle robot and retrieving status information",
+      "version": "3.0.0",
+      "contact": {
+        "name": "NeuroVehicle Team"
+      }
+    },
+    "servers": [
+      {
+        "url": "http://{deviceIp}",
+        "description": "NeuroVehicle IP address",
+        "variables": {
+          "deviceIp": {
+            "default": "192.168.4.1",
+            "description": "IP address of the NeuroVehicle's WiFi access point"
+          }
+        }
+      }
+    ],
+    "tags": [
+      {
+        "name": "core",
+        "description": "Core API endpoints"
+      },
+      {
+        "name": "control",
+        "description": "Vehicle control endpoints"
+      },
+      {
+        "name": "sensors",
+        "description": "Sensor data endpoints"
+      },
+      {
+        "name": "camera",
+        "description": "Camera control and streaming"
+      }
+    ],
+    "paths": {
+      "/api": {
+        "get": {
+          "tags": ["core"],
+          "summary": "List all API endpoints",
+          "description": "Returns a list of all available API endpoints",
+          "responses": {
+            "200": {
+              "description": "Successful response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EndpointList"
+                  },
+                  "example": {
+                    "success": true,
+                    "message": "NeuroVehicle API",
+                    "data": {
+                      "endpoints": [
+                        "/api/info",
+                        "/api/motor",
+                        "/api/status",
+                        "/api/docs",
+                        "/api/mode",
+                        "/api/sensor"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/info": {
+        "get": {
+          "tags": ["core"],
+          "summary": "Get device information",
+          "description": "Returns information about the device including version and network details",
+          "responses": {
+            "200": {
+              "description": "Successful response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/DeviceInfo"
+                  },
+                  "example": {
+                    "success": true,
+                    "message": "Device Information",
+                    "data": {
+                      "device": "NeuroVehicle",
+                      "version": "3.0.0",
+                      "ip": "192.168.4.1",
+                      "mac": "AA:BB:CC:DD:EE:FF",
+                      "uptime": 1234
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/motor": {
+        "get": {
+          "tags": ["control"],
+          "summary": "Get motor status",
+          "description": "Returns the current motor status and speed mode",
+          "responses": {
+            "200": {
+              "description": "Successful response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/MotorStatus"
+                  },
+                  "example": {
+                    "success": true,
+                    "message": "Motor status",
+                    "data": {
+                      "speed_mode": "normal"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": ["control"],
+          "summary": "Control vehicle motors",
+          "description": "Send commands to control the vehicle's movement",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotorCommand"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Command executed successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CommandResponse"
+                  },
+                  "example": {
+                    "success": true,
+                    "message": "Command executed: forward"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid request",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  },
+                  "example": {
+                    "success": false,
+                    "message": "Unknown command or missing parameters"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/status": {
+        "get": {
+          "tags": ["core"],
+          "summary": "Get vehicle status",
+          "description": "Returns the current status of the vehicle including battery, memory and control mode",
+          "responses": {
+            "200": {
+              "description": "Successful response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/VehicleStatus"
+                  },
+                  "example": {
+                    "success": true,
+                    "message": "Vehicle Status",
+                    "data": {
+                      "battery_voltage": 3.7,
+                      "free_heap": 123456,
+                      "uptime": 1234,
+                      "signal_strength": -70,
+                      "motor_speed_mode": "normal",
+                      "control_mode": "web"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/docs": {
+        "get": {
+          "tags": ["core"],
+          "summary": "API documentation",
+          "description": "Returns HTML documentation for the API",
+          "responses": {
+            "200": {
+              "description": "HTML documentation",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/mode": {
+        "get": {
+          "tags": ["control"],
+          "summary": "Get control mode",
+          "description": "Returns the current control mode (web or ml)",
+          "responses": {
+            "200": {
+              "description": "Successful response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ModeResponse"
+                  },
+                  "example": {
+                    "success": true,
+                    "message": "Current control mode",
+                    "data": {
+                      "mode": "web"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": ["control"],
+          "summary": "Set control mode",
+          "description": "Changes the control mode between web interface and ML application",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModeRequest"
+                },
+                "example": {
+                  "mode": "web"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Mode changed successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CommandResponse"
+                  },
+                  "example": {
+                    "success": true,
+                    "message": "Mode changed to web control"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid mode",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  },
+                  "example": {
+                    "success": false,
+                    "message": "Invalid mode. Use 'web' or 'ml'"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/sensor": {
+        "get": {
+          "tags": ["sensors"],
+          "summary": "Get distance sensor reading",
+          "description": "Returns the current distance reading from the HC-SR04 ultrasonic sensor",
+          "responses": {
+            "200": {
+              "description": "Successful response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SensorResponse"
+                  },
+                  "example": {
+                    "data": {
+                      "distance": 42.5,
+                      "success": true,
+                      "message": "Distance retrieved successfully"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Sensor error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SensorResponse"
+                  },
+                  "example": {
+                    "data": {
+                      "distance": -1,
+                      "success": false,
+                      "message": "Failed to retrieve distance"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/capture": {
+        "get": {
+          "tags": ["camera"],
+          "summary": "Capture camera image",
+          "description": "Returns a single JPEG image from the camera",
+          "responses": {
+            "200": {
+              "description": "JPEG image",
+              "content": {
+                "image/jpeg": {
+                  "schema": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Camera error",
+              "content": {
+                "text/plain": {
+                  "schema": {
+                    "type": "string"
+                  },
+                  "example": "Camera capture failed"
+                }
+              }
+            }
+          }
+        }
+      },
+      "/stream": {
+        "get": {
+          "tags": ["camera"],
+          "summary": "Stream camera feed",
+          "description": "Starts an MJPEG stream from the camera",
+          "responses": {
+            "200": {
+              "description": "MJPEG stream",
+              "content": {
+                "multipart/x-mixed-replace": {
+                  "schema": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/camera/resolution": {
+        "get": {
+          "tags": ["camera"],
+          "summary": "Change camera resolution",
+          "description": "Changes the camera resolution",
+          "parameters": [
+            {
+              "name": "res",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": ["UXGA", "SXGA", "XGA", "SVGA", "VGA", "CIF", "QVGA"]
+              },
+              "description": "Desired resolution"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Resolution changed",
+              "content": {
+                "text/plain": {
+                  "schema": {
+                    "type": "string"
+                  },
+                  "example": "Resolution set to SVGA"
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid resolution",
+              "content": {
+                "text/plain": {
+                  "schema": {
+                    "type": "string"
+                  },
+                  "example": "Invalid resolution"
+                }
+              }
+            },
+            "500": {
+              "description": "Failed to set resolution",
+              "content": {
+                "text/plain": {
+                  "schema": {
+                    "type": "string"
+                  },
+                  "example": "Failed to set resolution"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "EndpointList": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "endpoints": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "DeviceInfo": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "device": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "ip": {
+                  "type": "string"
+                },
+                "mac": {
+                  "type": "string"
+                },
+                "uptime": {
+                  "type": "integer",
+                  "description": "Uptime in seconds"
+                }
+              }
+            }
+          }
+        },
+        "MotorStatus": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "speed_mode": {
+                  "type": "string",
+                  "enum": ["low", "normal", "high"]
+                }
+              }
+            }
+          }
+        },
+        "MotorCommand": {
+          "type": "object",
+          "required": ["command"],
+          "properties": {
+            "command": {
+              "type": "string",
+              "enum": ["forward", "backward", "left", "right", "stop", "speed", "set_speed_mode"]
+            },
+            "left": {
+              "type": "integer",
+              "minimum": -255,
+              "maximum": 255,
+              "description": "Left motor speed (required for 'speed' command)"
+            },
+            "right": {
+              "type": "integer",
+              "minimum": -255,
+              "maximum": 255,
+              "description": "Right motor speed (required for 'speed' command)"
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["low", "normal", "high"],
+              "description": "Speed mode (required for 'set_speed_mode' command)"
+            }
+          }
+        },
+        "CommandResponse": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        },
+        "ErrorResponse": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "example": false
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        },
+        "VehicleStatus": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "battery_voltage": {
+                  "type": "number",
+                  "format": "float"
+                },
+                "free_heap": {
+                  "type": "integer"
+                },
+                "uptime": {
+                  "type": "integer",
+                  "description": "Uptime in seconds"
+                },
+                "signal_strength": {
+                  "type": "integer",
+                  "description": "WiFi signal strength in dBm"
+                },
+                "motor_speed_mode": {
+                  "type": "string",
+                  "enum": ["low", "normal", "high"]
+                },
+                "control_mode": {
+                  "type": "string",
+                  "enum": ["web", "ml"]
+                }
+              }
+            }
+          }
+        },
+        "ModeRequest": {
+          "type": "object",
+          "required": ["mode"],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["web", "ml"]
+            }
+          }
+        },
+        "ModeResponse": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": ["web", "ml"]
+                }
+              }
+            }
+          }
+        },
+        "SensorResponse": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "distance": {
+                  "type": "number",
+                  "format": "float",
+                  "description": "Distance in centimeters, -1 if error"
+                },
+                "success": {
+                  "type": "boolean"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }

@@ -9,5 +9,7 @@
 
 void setupSensor();
 float getDistance();
+void checkObstacles();
+void setForwardMovement(bool isForward);
 
 #endif // SENSOR_CONTROL_H
