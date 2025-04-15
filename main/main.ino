@@ -2,11 +2,13 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <WebSocketsServer.h>
+
 #include "config.h"
 #include "motor_control.h"
 #include "web_server.h"
 #include "api_handler.h"
 #include "sensor_control.h"
+
 #include "camera_control.h"
 
 // Utworzenie serwera web na porcie 80
@@ -60,5 +62,5 @@ void loop() {
   webSocket.loop();
   handleSensorWebSocket(); // obsługa WebSocket dla sensora
   checkObstacles(); // sprawdzanie przeszkód
-  delay(2);  // Małe opóźnienie dla stabilności
+  delay(100);  // Małe opóźnienie dla stabilności
 }
