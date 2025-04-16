@@ -337,6 +337,27 @@ String generateCameraHtml() {
     html += "  // Try again after 5 seconds";
     html += "  setTimeout(refreshStream, 5000);";
     html += "};";
+
+    html += "// Stop streaming when user leaves the page to save resources";
+    html += "window.addEventListener('beforeunload', function() {";
+    html += "  fetch('/camera/stop', {";
+    html += "    method: 'GET',";
+    html += "    keepalive: true";
+    html += "  });";
+    html += "});";
+
+    html += "// Also handle visibility changes (when user switches tabs)";
+    html += "document.addEventListener('visibilitychange', function() {";
+    html += "  if (document.visibilityState === 'hidden') {";
+    html += "    fetch('/camera/stop', {";
+    html += "      method: 'GET',";
+    html += "      keepalive: true";
+    html += "    });";
+    html += "  } else if (document.visibilityState === 'visible') {";
+    html += "    // When tab becomes visible again, refresh the stream";
+    html += "    refreshStream();";
+    html += "  }";
+    html += "});";
     
     html += "</script>";
     html += "</body></html>";

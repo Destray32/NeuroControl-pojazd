@@ -6,6 +6,9 @@
 #include <Arduino.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #include "camera_related/camera_pins.h"
 #include "esp_camera.h"
 

@@ -62,5 +62,5 @@ void loop() {
   webSocket.loop();
   handleSensorWebSocket(); // obsługa WebSocket dla sensora
   checkObstacles(); // sprawdzanie przeszkód
-  delay(100);  // Małe opóźnienie dla stabilności
+  delay(20);  // Małe opóźnienie dla stabilności
 }
