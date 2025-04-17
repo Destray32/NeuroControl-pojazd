@@ -930,6 +930,7 @@ void handleAPISensor()
         data["distance"] = getDistance(); // funkcja do odczytu live danych z sensora
         data["success"] = (data["distance"] != -1);
         data["message"] = (data["success"]) ? "Distance retrieved successfully" : "Failed to retrieve distance";
+        data["event"] = "sensor_data";
 
         String response;
         serializeJson(doc, response);
@@ -957,9 +958,13 @@ void handleSensorWebSocket()
         float distance = getDistance();
 
         DynamicJsonDocument doc(128);
-        doc["status"] = (distance != -1) ? "success" : "error";
-        doc["distance"] = (distance != -1) ? distance : 0; // zwraca dystans albo 0 w przypadku błędu
-        doc["timestamp"] = currentTime;                    // znacznik czasu
+        doc["event"] = "sensor_data";  // Move event to top level
+        
+        // Create nested data object
+        JsonObject data = doc.createNestedObject("data");
+        data["status"] = (distance != -1) ? "success" : "error";
+        data["distance"] = (distance != -1) ? distance : 0;
+        data["timestamp"] = currentTime;
 
         String message;
         serializeJson(doc, message);
